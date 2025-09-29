@@ -1,55 +1,77 @@
 import { Truck, Pallet, PlacedPallet } from './types';
 
-// =====================================================================================
-// FUNCIÓN PRINCIPAL ORQUESTADORA (Ahora simplificada)
-// =====================================================================================
-export function calculateLoad(truck: Truck, pallets: Pallet[]): { placedPallets: PlacedPallet[], unplacedPallets: Pallet[] } {
-  console.log("Running Dynamic Best-Fit Packer v5...");
-  // Ya no necesitamos múltiples heurísticas, el nuevo algoritmo es inherentemente más inteligente.
-  // Simplemente ordenamos por volumen una vez como punto de partida.
-  const sortedPallets = sortPallets(pallets, 'volume');
-  const result = pack(truck, sortedPallets);
-  console.log(`Best result found: Placed ${result.placedPallets.length} pallets.`);
-  return result;
+// Tipos de estrategias (heurísticas) y el formato del resultado
+type Heuristic = 'volume' | 'area' | 'side_long' | 'side_short';
+
+export interface SimulationResult {
+  heuristic: Heuristic;
+  placedPallets: PlacedPallet[];
+  unplacedPallets: Pallet[];
 }
 
 // =====================================================================================
-// NUEVA LÓGICA DE EMPAQUETADO DINÁMICO
+// FUNCIÓN PRINCIPAL ORQUESTADORA
 // =====================================================================================
-function pack(truck: Truck, pallets: Pallet[]): { placedPallets: PlacedPallet[], unplacedPallets: Pallet[] } {
-  const placedPallets: PlacedPallet[] = [];
-  let unplacedPallets: Pallet[] = [...pallets];
-  let currentWeight = 0;
-  
-  let anchorPoints = [{ x: 0, y: 0, z: 0 }];
+export function calculateLoad(truck: Truck, pallets: Pallet[]): SimulationResult[] {
+  const heuristics: Heuristic[] = ['volume', 'area', 'side_long', 'side_short'];
+  let allResults: SimulationResult[] = [];
 
-  // El bucle principal se ejecuta mientras podamos seguir colocando tarimas
-  while (unplacedPallets.length > 0) {
+  // 1. Separar tarimas por importancia
+  const importantPallets = pallets.filter(p => p.isImportant);
+  const normalPallets = pallets.filter(p => !p.isImportant);
+
+  // 2. Ejecutar la simulación para cada estrategia
+  for (const heuristic of heuristics) {
+    const sortedImportant = sortPallets(importantPallets, heuristic);
+    const importantResult = pack(truck, sortedImportant, [], 0);
+
+    if (importantResult.unplacedPallets.length > 0) {
+      console.warn(`Heurística '${heuristic}' descartada: No se pudieron colocar todas las tarimas prioritarias.`);
+      continue;
+    }
+
+    const sortedNormal = sortPallets(normalPallets, heuristic);
+    const finalResult = pack(truck, sortedNormal, importantResult.placedPallets, importantResult.currentWeight);
+    
+    allResults.push({
+      heuristic,
+      ...finalResult,
+    });
+  }
+  
+  // 3. Filtrar resultados duplicados y ordenar de mejor a peor
+  allResults = filterAndSortResults(allResults);
+
+  return allResults;
+}
+
+// =====================================================================================
+// LÓGICA DE EMPAQUETADO DINÁMICO
+// =====================================================================================
+function pack(truck: Truck, palletsToPlace: Pallet[], initialPlaced: PlacedPallet[], initialWeight: number): { placedPallets: PlacedPallet[], unplacedPallets: Pallet[], currentWeight: number } {
+  const placedPallets: PlacedPallet[] = [...initialPlaced];
+  let pallets = [...palletsToPlace];
+  let currentWeight = initialWeight;
+  
+  while (pallets.length > 0) {
     let bestFit: { pallet: Pallet, position: PlacedPallet, palletIndex: number } | null = null;
     let palletPlacedInIteration = false;
 
-    // 1. En CADA iteración, probamos TODAS las tarimas restantes
-    for (let i = 0; i < unplacedPallets.length; i++) {
-      const pallet = unplacedPallets[i];
+    // Generamos y filtramos los puntos de anclaje en cada iteración
+    let anchorPoints = getAnchorPoints(placedPallets);
+    anchorPoints = pruneAnchorPoints(anchorPoints, placedPallets, truck);
+
+    for (let i = 0; i < pallets.length; i++) {
+      const pallet = pallets[i];
       if (currentWeight + pallet.weight > truck.maxWeight) continue;
 
-      // 2. Para cada tarima, probamos todos los puntos y rotaciones
       for (const point of anchorPoints) {
         const rotations = getRotations(pallet);
         for (const rotation of rotations) {
-          const candidate: PlacedPallet = {
-            ...pallet,
-            width: rotation.w, length: rotation.l, height: rotation.h,
-            x: point.x, y: point.y, z: point.z,
-          };
+          const candidate = { ...pallet, ...rotation, ...point };
 
           if (isValidPlacement(candidate, truck, placedPallets)) {
-            // 3. Si encontramos una posición válida, la guardamos como la "mejor" hasta ahora
-            // si cumple con los criterios (más abajo, más al fondo, etc.)
-            if (bestFit === null || 
-                candidate.z < bestFit.position.z ||
-               (candidate.z === bestFit.position.z && candidate.y < bestFit.position.y) ||
-               (candidate.z === bestFit.position.z && candidate.y === bestFit.position.y && candidate.x < bestFit.position.x)) {
+            if (bestFit === null || candidate.z < bestFit.position.z || (candidate.z === bestFit.position.z && candidate.y < bestFit.position.y)) {
               bestFit = { pallet, position: candidate, palletIndex: i };
             }
           }
@@ -57,40 +79,67 @@ function pack(truck: Truck, pallets: Pallet[]): { placedPallets: PlacedPallet[],
       }
     }
 
-    // 4. Después de probar todo, si encontramos un "mejor ajuste", lo colocamos
     if (bestFit) {
       const { position, palletIndex } = bestFit;
       placedPallets.push(position);
       currentWeight += position.weight;
-      
-      // Añadimos las nuevas esquinas como posibles puntos de anclaje
-      anchorPoints.push({ x: position.x + position.width, y: position.y, z: position.z });
-      anchorPoints.push({ x: position.x, y: position.y + position.length, z: position.z });
-      anchorPoints.push({ x: position.x, y: position.y, z: position.z + position.height });
-
-      // Eliminamos la tarima colocada de la lista de pendientes
-      unplacedPallets.splice(palletIndex, 1);
+      pallets.splice(palletIndex, 1);
       palletPlacedInIteration = true;
     }
 
-    // Si en una iteración completa no pudimos colocar ninguna tarima, paramos.
-    if (!palletPlacedInIteration) {
-      break;
-    }
+    if (!palletPlacedInIteration) break;
   }
 
-  return { placedPallets, unplacedPallets };
+  return { placedPallets, unplacedPallets: pallets, currentWeight };
 }
 
 
 // =====================================================================================
-// FUNCIONES AUXILIARES (Sin cambios, pero incluidas para que el archivo esté completo)
+// FUNCIONES AUXILIARES
 // =====================================================================================
-function sortPallets(pallets: Pallet[], sortBy: 'volume' | 'area' | 'side'): Pallet[] {
+function filterAndSortResults(results: SimulationResult[]): SimulationResult[] {
+    const uniqueResults = new Map<string, SimulationResult>();
+    for (const result of results) {
+        const key = result.placedPallets.map(p => p.id).sort().join(',');
+        if (!uniqueResults.has(key) || result.placedPallets.length > uniqueResults.get(key)!.placedPallets.length) {
+            uniqueResults.set(key, result);
+        }
+    }
+    const filtered = Array.from(uniqueResults.values());
+    filtered.sort((a, b) => b.placedPallets.length - a.placedPallets.length);
+    return filtered;
+}
+
+function pruneAnchorPoints(points: {x:number, y:number, z:number}[], placed: PlacedPallet[], truck: Truck) {
+    return points.filter(p => {
+        if (p.x >= truck.width || p.y >= truck.length || p.z >= truck.height) return false;
+        for (const item of placed) {
+            if (p.x >= item.x && p.x < item.x + item.width &&
+                p.y >= item.y && p.y < item.y + item.length &&
+                p.z >= item.z && p.z < item.z + item.height) {
+                return false;
+            }
+        }
+        return true;
+    });
+}
+
+function getAnchorPoints(placedPallets: PlacedPallet[]): { x: number, y: number, z: number }[] {
+  const points: { x: number, y: number, z: number }[] = [{ x: 0, y: 0, z: 0 }];
+  for (const p of placedPallets) {
+    points.push({ x: p.x + p.width, y: p.y, z: p.z });
+    points.push({ x: p.x, y: p.y + p.length, z: p.z });
+    points.push({ x: p.x, y: p.y, z: p.z + p.height });
+  }
+  return points;
+}
+
+function sortPallets(pallets: Pallet[], sortBy: Heuristic): Pallet[] {
   const palletsCopy = [...pallets];
   palletsCopy.sort((a, b) => {
     switch (sortBy) {
-      case 'side': return Math.max(b.width, b.length, b.height) - Math.max(a.width, a.length, a.height);
+      case 'side_long': return Math.max(b.width, b.length) - Math.max(a.width, a.length);
+      case 'side_short': return Math.min(b.width, b.length) - Math.min(a.width, a.length);
       case 'area': return (b.width * b.length) - (a.width * a.length);
       case 'volume': default: return (b.width * b.length * b.height) - (a.width * a.length * a.height);
     }
@@ -100,34 +149,16 @@ function sortPallets(pallets: Pallet[], sortBy: 'volume' | 'area' | 'side'): Pal
 
 function getRotations(pallet: Pallet): { w: number, l: number, h: number }[] {
   const { width, length, height } = pallet;
-  // Optimizacion: si las dimensiones son iguales, no generar rotaciones duplicadas
-  const uniqueRotations = new Set<string>();
-  const rotations: { w: number, l: number, h: number }[] = [];
-  const dims = [width, length, height];
-  
-  // Generar todas las permutaciones
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (i === j) continue;
-      for (let k = 0; k < 3; k++) {
-        if (k === i || k === j) continue;
-        const rot = [dims[i], dims[j], dims[k]].join(',');
-        if (!uniqueRotations.has(rot)) {
-          uniqueRotations.add(rot);
-          rotations.push({ w: dims[i], l: dims[j], h: dims[k] });
-        }
-      }
-    }
-  }
-  return rotations.length > 0 ? rotations : [{ w: width, l: length, h: height }];
+  return [
+    { w: width, l: length, h: height }, { w: length, l: width, h: height },
+    { w: width, l: height, h: length }, { w: height, l: width, h: length },
+    { w: length, l: height, h: width }, { w: height, l: length, h: width },
+  ];
 }
-
 
 function isValidPlacement(pallet: PlacedPallet, truck: Truck, placedPallets: PlacedPallet[]): boolean {
   if (pallet.x < 0 || pallet.y < 0 || pallet.z < 0) return false;
-  if (pallet.x + pallet.width > truck.width + 0.01 || pallet.y + pallet.length > truck.length + 0.01 || pallet.z + pallet.height > truck.height + 0.01) {
-    return false;
-  }
+  if (pallet.x + pallet.width > truck.width + 0.01 || pallet.y + pallet.length > truck.length + 0.01 || pallet.z + pallet.height > truck.height + 0.01) return false;
   for (const other of placedPallets) {
     if (collides(pallet, other)) { return false; }
   }

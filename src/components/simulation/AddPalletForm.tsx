@@ -13,6 +13,7 @@ const initialFormState = {
     height: 1.0,
     weight: 150,
     isFragile: false,
+    isImportant: false, // <-- NUEVO CAMPO
 };
 
 export default function AddPalletForm({ onAddPallet, onClose }: AddPalletFormProps) {
@@ -29,12 +30,13 @@ export default function AddPalletForm({ onAddPallet, onClose }: AddPalletFormPro
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onAddPallet(formData);
-        onClose(); // Cierra la modal después de agregar
+        onClose();
     };
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
+                {/* ... (campos de dimensiones y peso sin cambios) ... */}
                 <div>
                     <label htmlFor="length" className="block text-sm font-medium text-slate-300 mb-1">Largo (m)</label>
                     <input type="number" name="length" id="length" value={formData.length} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2" step="0.1" required />
@@ -53,18 +55,21 @@ export default function AddPalletForm({ onAddPallet, onClose }: AddPalletFormPro
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-2">
-                <input type="checkbox" name="isFragile" id="isFragile" checked={formData.isFragile} onChange={handleChange} className="h-4 w-4 rounded bg-slate-700 border-slate-600 text-cyan-500 focus:ring-cyan-500" />
-                <label htmlFor="isFragile" className="text-sm font-medium text-slate-300">¿Es un objeto frágil?</label>
+            {/* Checkboxes para Frágil e Importante */}
+            <div className="flex flex-col gap-2 mt-2">
+                <div className="flex items-center gap-2">
+                    <input type="checkbox" name="isFragile" id="isFragile" checked={formData.isFragile} onChange={handleChange} className="h-4 w-4 rounded bg-slate-700 border-slate-600 text-cyan-500 focus:ring-cyan-500" />
+                    <label htmlFor="isFragile" className="text-sm font-medium text-slate-300">¿Es un objeto frágil?</label>
+                </div>
+                <div className="flex items-center gap-2">
+                    <input type="checkbox" name="isImportant" id="isImportant" checked={formData.isImportant} onChange={handleChange} className="h-4 w-4 rounded bg-slate-700 border-slate-600 text-red-500 focus:ring-red-500" />
+                    <label htmlFor="isImportant" className="text-sm font-medium text-slate-300">¿Es de carga prioritaria?</label>
+                </div>
             </div>
 
             <div className="flex justify-end gap-4 mt-4">
-                <button type="button" onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-md">
-                    Cancelar
-                </button>
-                <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md">
-                    Agregar Tarima
-                </button>
+                <button type="button" onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-md">Cancelar</button>
+                <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md">Agregar Tarima</button>
             </div>
         </form>
     );

@@ -12,6 +12,7 @@ export interface Pallet {
   height: number;
   weight: number;
   isFragile: boolean;
+  isImportant: boolean;
 }
 
 // AÑADE ESTA NUEVA INTERFAZ

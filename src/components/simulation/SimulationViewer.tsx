@@ -35,7 +35,6 @@ export default function SimulationViewer({ truck, result, selectedPalletId, onSe
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSpeed, setCurrentSpeed] = useState(speeds[1].value);
 
-  // Lógica del intervalo de la animación
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPlaying && result && animationIndex < result.placedPallets.length) {
@@ -53,7 +52,6 @@ export default function SimulationViewer({ truck, result, selectedPalletId, onSe
     return () => clearInterval(interval);
   }, [isPlaying, currentSpeed, result, animationIndex, onAnimationStep]);
 
-  // Reiniciar la animación cuando hay un nuevo resultado
   useEffect(() => {
     setAnimationIndex(result ? result.placedPallets.length : 0);
     setIsPlaying(false);
@@ -88,10 +86,9 @@ export default function SimulationViewer({ truck, result, selectedPalletId, onSe
   const visiblePallets = result ? result.placedPallets.slice(0, animationIndex) : [];
 
   return (
-    <div className="bg-slate-800 p-6 rounded-lg shadow-lg flex-grow flex flex-col relative h-3/5">
+    <div className="bg-slate-800 p-6 rounded-lg shadow-lg flex-grow flex flex-col relative h-[70vh]">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Visualización 3D</h2>
-        {/* Controles de la Animación */}
         {result && result.placedPallets.length > 0 && (
           <div className="flex items-center gap-2 bg-slate-700 p-1 rounded-lg">
             <button onClick={handleReset} title="Reiniciar" className="p-2 hover:bg-slate-600 rounded-md"><Rewind size={18} /></button>
