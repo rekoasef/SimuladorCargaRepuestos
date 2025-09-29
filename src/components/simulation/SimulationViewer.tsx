@@ -86,7 +86,8 @@ export default function SimulationViewer({ truck, result, selectedPalletId, onSe
   const visiblePallets = result ? result.placedPallets.slice(0, animationIndex) : [];
 
   return (
-    <div className="bg-slate-800 p-6 rounded-lg shadow-lg flex-grow flex flex-col relative h-[70vh]">
+    // --- CAMBIO AQUÍ: Altura mínima grande en píxeles ---
+    <div className="bg-slate-800 p-6 rounded-lg shadow-lg flex flex-col relative min-h-[600px] lg:min-h-[750px]">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Visualización 3D</h2>
         {result && result.placedPallets.length > 0 && (

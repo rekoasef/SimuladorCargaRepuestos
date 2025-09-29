@@ -81,7 +81,6 @@ export default function PalletList({ pallets, onAddPallet, onRemovePallet, onSet
   const PalletRow = ({ pallet }: { pallet: Pallet }) => {
     const isSelected = selectedPalletId === pallet.id;
     return (
-      // --- CAMBIO AQUÍ ---
       <div 
           className={`grid grid-cols-[1fr,1.2fr,0.8fr,0.5fr,0.5fr,0.5fr] gap-4 p-2 items-center cursor-pointer rounded-md transition-colors
             ${isSelected ? 'bg-cyan-900/50' : 'hover:bg-slate-700/50'}
@@ -93,7 +92,6 @@ export default function PalletList({ pallets, onAddPallet, onRemovePallet, onSet
           <div>{`${pallet.length}×${pallet.width}×${pallet.height}`}</div>
           <div>{`${pallet.weight} kg`}</div>
           <div className="flex justify-center">{pallet.isFragile ? <ShieldAlert className="text-yellow-400" size={20} /> : <ShieldCheck className="text-slate-500" size={20} />}</div>
-          {/* --- CAMBIO AQUÍ --- */}
           <div className="flex justify-center">{pallet.isImportant ? <Star className="text-green-500 fill-green-500" size={20} /> : <Star className="text-slate-500" size={20} />}</div>
           <div><button onClick={(e) => { e.stopPropagation(); onRemovePallet(pallet.id); }} className="text-red-500 hover:text-red-400 p-1"><Trash2 size={18} /></button></div>
       </div>
@@ -102,7 +100,7 @@ export default function PalletList({ pallets, onAddPallet, onRemovePallet, onSet
 
   return (
     <>
-      <div className="bg-slate-800 p-6 rounded-lg shadow-lg flex-grow flex flex-col h-[65vh] min-h-[500px]">
+      <div className="bg-slate-800 p-6 rounded-lg shadow-lg flex flex-col min-h-[500px]">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Package className="text-cyan-400" />

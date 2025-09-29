@@ -73,9 +73,8 @@ export default function Home() {
 
   return (
     <main className="flex flex-col lg:flex-row bg-slate-900 text-white min-h-screen">
-      {/* Columna Izquierda con su propio scroll en pantallas grandes */}
-      <div className="w-full lg:w-1/3 p-4 md:p-8 flex flex-col gap-8 lg:h-screen lg:overflow-y-auto">
-        <h1 className="text-3xl font-bold text-cyan-400">Simulador de Carga v1.4</h1>
+      <div className="w-full lg:w-1/3 p-4 md:p-8 flex flex-col gap-8">
+        <h1 className="text-3xl font-bold text-cyan-400">Simulador de Carga v1.6</h1>
         <TransportForm truck={truck} setTruck={setTruck} />
         <PalletList 
           pallets={pallets} 
@@ -94,29 +93,22 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Columna Derecha con su propio scroll en pantallas grandes */}
-      <div className="w-full lg:w-2/3 flex flex-col lg:h-screen lg:overflow-y-auto">
-        <div className="p-4 sticky top-0 bg-slate-900 z-20">
-          <ResultSelector results={simulationResults} activeIndex={activeIndex} onSelect={setActiveIndex} />
-        </div>
-        <div className="p-4 -mt-4">
-          <SimulationViewer 
-            truck={truck} 
-            result={activeResult}
-            selectedPalletId={selectedPalletId}
-            onSelectPallet={handleSelectPallet}
-            onAnimationStep={setHighlightedIndex}
-            selectedPalletObject={selectedPalletObject}
-          />
-        </div>
-        <div className="p-4">
-          <LoadingPlan 
-            result={activeResult}
-            selectedPalletId={selectedPalletId}
-            onSelectPallet={handleSelectPallet}
-            highlightedIndex={highlightedIndex}
-          />
-        </div>
+      <div className="w-full lg:w-2/3 p-4 md:p-8 flex flex-col gap-8">
+        <ResultSelector results={simulationResults} activeIndex={activeIndex} onSelect={setActiveIndex} />
+        <SimulationViewer 
+          truck={truck} 
+          result={activeResult}
+          selectedPalletId={selectedPalletId}
+          onSelectPallet={handleSelectPallet}
+          onAnimationStep={setHighlightedIndex}
+          selectedPalletObject={selectedPalletObject}
+        />
+        <LoadingPlan 
+          result={activeResult}
+          selectedPalletId={selectedPalletId}
+          onSelectPallet={handleSelectPallet}
+          highlightedIndex={highlightedIndex}
+        />
       </div>
     </main>
   );

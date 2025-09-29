@@ -1,5 +1,5 @@
 import { PlacedPallet } from "../../lib/types";
-import { X, Package, Ruler, Scale, ShieldCheck, ShieldAlert } from "lucide-react"; // <-- CORRECCIÓN AQUÍ
+import { X, Package, Ruler, Scale, ShieldCheck, ShieldAlert } from "lucide-react"; // <-- CORREGIDO: Scale en lugar de Weight
 
 interface SelectionDetailProps {
   selectedPallet: PlacedPallet | null;
@@ -24,7 +24,7 @@ export default function SelectionDetail({ selectedPallet, onClose }: SelectionDe
         <p className="font-bold text-base truncate" title={selectedPallet.id}>{selectedPallet.id}</p>
         <div className="border-t border-slate-700 my-2"></div>
         <p className="flex items-center gap-2"><Ruler size={16} className="text-slate-400"/> Dimensiones: {selectedPallet.length}m × {selectedPallet.width}m × {selectedPallet.height}m</p>
-        <p className="flex items-center gap-2"><Scale size={16} className="text-slate-400"/> Peso: {selectedPallet.weight} kg</p> {/* <-- CORRECCIÓN AQUÍ */}
+        <p className="flex items-center gap-2"><Scale size={16} className="text-slate-400"/> Peso: {selectedPallet.weight} kg</p> {/* <-- CORREGIDO: Scale en lugar de Weight */}
         <p className="flex items-center gap-2">
           {selectedPallet.isFragile 
             ? <ShieldAlert size={16} className="text-yellow-400"/> 
