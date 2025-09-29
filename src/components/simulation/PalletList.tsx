@@ -44,7 +44,7 @@ export default function PalletList({ pallets, onAddPallet, onRemovePallet, onSet
           const json = XLSX.utils.sheet_to_json(worksheet, { raw: false }) as any[];
           
           const importedPallets: Pallet[] = [];
-          
+          // @ts-ignore
           for (const [index, row] of json.entries()) {
             const rowNum = index + 2;
             
