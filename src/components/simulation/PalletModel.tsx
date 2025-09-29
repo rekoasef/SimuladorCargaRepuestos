@@ -1,39 +1,59 @@
 import { PlacedPallet } from "../../lib/types";
 import { Box, Text } from "@react-three/drei";
+import { useSpring, a } from '@react-spring/three'; // <-- IMPORTAR
 
 interface PalletModelProps {
   pallet: PlacedPallet;
+  isSelected: boolean;
+  onSelect: (id: string | null) => void;
 }
 
-export default function PalletModel({ pallet }: PalletModelProps) {
-  // Calculamos la posición central del mesh. R3F posiciona los objetos desde su centro.
+export default function PalletModel({ pallet, isSelected, onSelect }: PalletModelProps) {
   const position: [number, number, number] = [
     pallet.x + pallet.width / 2,
-    pallet.z + pallet.height / 2, // Eje Z de Three.js es el eje Y en nuestro sistema (altura)
-    pallet.y + pallet.length / 2, // Eje Y de Three.js es el eje Z en nuestro sistema (profundidad)
+    pallet.z + pallet.height / 2,
+    pallet.y + pallet.length / 2,
   ];
 
+  const baseColor = pallet.isFragile ? '#FFD700' : '#06B6D4';
+
+  // Animación de "pop-in"
+  const { scale } = useSpring({
+    from: { scale: [0.3, 0.3, 0.3] },
+    to: { scale: [1, 1, 1] },
+    config: { tension: 220, friction: 20 },
+  });
+
   return (
-    <Box
-      args={[pallet.width, pallet.height, pallet.length]} // Ancho, Alto, Profundidad
-      position={position}
-    >
-      <meshStandardMaterial 
-        color={pallet.isFragile ? '#FFD700' : '#06B6D4'} // Dorado si es frágil, cyan si no
-        transparent 
-        opacity={0.8}
-      />
-      {/* Mostramos el ID de la tarima sobre ella */}
-      <Text
-        position={[0, pallet.height / 2 + 0.1, 0]} // Un poco por encima del centro superior
-        fontSize={0.15}
-        color="black"
-        anchorX="center"
-        anchorY="middle"
-        rotation={[-Math.PI / 2, 0, 0]} // Rotar el texto para que quede plano
+    // Usamos a.group para aplicar la animación de escala
+    // @ts-ignore
+    <a.group scale={scale} position={position}>
+      <Box
+        args={[pallet.width, pallet.height, pallet.length]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(pallet.id);
+        }}
       >
-        {pallet.id}
-      </Text>
-    </Box>
+        <meshStandardMaterial
+          color={baseColor}
+          emissive={isSelected ? baseColor : '#000000'}
+          emissiveIntensity={isSelected ? 1.5 : 0}
+          toneMapped={false}
+          transparent
+          opacity={0.85}
+        />
+        <Text
+          position={[0, pallet.height / 2 + 0.1, 0]}
+          fontSize={0.15}
+          color="black"
+          anchorX="center"
+          anchorY="middle"
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          {pallet.id}
+        </Text>
+      </Box>
+    </a.group>
   );
 }
