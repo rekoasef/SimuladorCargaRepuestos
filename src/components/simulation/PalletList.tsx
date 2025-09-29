@@ -19,8 +19,9 @@ interface PalletListProps {
 const VISIBLE_PALLET_LIMIT = 10;
 
 const isNumeric = (value: any): boolean => {
+  if (value === null || value === undefined || String(value).trim() === '') return false;
   const strValue = String(value).replace(',', '.');
-  return !isNaN(parseFloat(strValue)) && /^-?\d+(\.\d+)?$/.test(strValue);
+  return !isNaN(parseFloat(strValue)) && isFinite(Number(strValue));
 };
 
 export default function PalletList({ pallets, onAddPallet, onRemovePallet, onSetPallets, selectedPalletId, onSelectPallet }: PalletListProps) {
@@ -41,29 +42,46 @@ export default function PalletList({ pallets, onAddPallet, onRemovePallet, onSet
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const json = XLSX.utils.sheet_to_json(worksheet, { raw: false }) as any[];
-
+          
           const importedPallets: Pallet[] = [];
           
-          json.forEach((row, index) => {
+          for (const [index, row] of json.entries()) {
             const rowNum = index + 2;
-            const id = row.ID;
-            if (!id || !row.Largo || !row.Ancho || !row.Alto || !row.Peso) {
-              return toast.error(`Error en Fila ${rowNum}: Faltan datos requeridos.`);
+            
+            // --- LÓGICA DE IMPORTACIÓN MEJORADA ---
+            // Normaliza los nombres de las claves (encabezados)
+            const normalizedRow: {[key: string]: any} = {};
+            for (const key in row) {
+              normalizedRow[key.trim().toLowerCase()] = row[key];
             }
-            if (!isNumeric(row.Largo) || !isNumeric(row.Ancho) || !isNumeric(row.Alto) || !isNumeric(row.Peso)) {
-              return toast.error(`Error en Fila ${rowNum}: Una de las medidas o el peso no es un número válido.`);
+
+            const id = normalizedRow['id'];
+            const length = normalizedRow['largo'];
+            const width = normalizedRow['ancho'];
+            const height = normalizedRow['alto'];
+            const weight = normalizedRow['peso'];
+            const isFragile = normalizedRow['fragil'];
+            const isImportant = normalizedRow['importancia'];
+
+            if (!id || length === undefined || width === undefined || height === undefined || weight === undefined) {
+              toast.error(`Error en Fila ${rowNum}: Faltan columnas requeridas (ID, Largo, Ancho, Alto, Peso).`);
+              continue;
+            }
+            if (!isNumeric(length) || !isNumeric(width) || !isNumeric(height) || !isNumeric(weight)) {
+              toast.error(`Error en Fila ${rowNum}: Una de las medidas o el peso no es un número válido.`);
+              continue;
             }
 
             importedPallets.push({
               id: String(id),
-              length: parseFloat(String(row.Largo).replace(',', '.')),
-              width: parseFloat(String(row.Ancho).replace(',', '.')),
-              height: parseFloat(String(row.Alto).replace(',', '.')),
-              weight: parseFloat(String(row.Peso).replace(',', '.')),
-              isFragile: String(row.Fragil).toUpperCase() === 'SI',
-              isImportant: String(row.Importancia).toUpperCase() === 'SI',
+              length: parseFloat(String(length).replace(',', '.')),
+              width: parseFloat(String(width).replace(',', '.')),
+              height: parseFloat(String(height).replace(',', '.')),
+              weight: parseFloat(String(weight).replace(',', '.')),
+              isFragile: String(isFragile).toUpperCase() === 'SI',
+              isImportant: String(isImportant).toUpperCase() === 'SI',
             });
-          });
+          }
           resolve(importedPallets);
         } catch (error) { reject(error); }
       };
